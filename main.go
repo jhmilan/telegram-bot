@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -66,7 +65,7 @@ func main() {
 			case "start":
 				respuesta = "Hola 👋 Soy tu bot en la Raspberry Pi 🤖"
 			case "ping":
-				respuesta = "pong 🏓"
+				respuesta = "pong! 🏓"
 			case "uptime":
 				respuesta, err = uptime()
 				if err != nil {

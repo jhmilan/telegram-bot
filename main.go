@@ -109,17 +109,16 @@ func main() {
 					respuesta = "❌ No se pudo obtener el uso de RAM"
 				}
 			case "bestcycling":
-				clase := update.Message.CommandArguments()
-				if clase == "" || contains(classes, clase) {
-					respuesta = fmt.Sprintf("🚴 Iniciando clase de bestcycling %s", clase)
-					go bestCycling(clase)
-				} else {
-					respuesta = "❌ Clase no conocida. Puedo elegir una al azar si pones nada. Elige\n"
-					respuesta += fmt.Sprint("/bestcycling\n")
-					for _, c := range classes {
-						respuesta += fmt.Sprintf("/bestcycling %s\n", c)
-					}
+				respuesta = "¡Ganas de pedalear eh! Para la clase actual:\n/bc_stop o\nElige una clase:\n\n/bc_random\n"
+				for _, c := range classes {
+					respuesta += fmt.Sprintf("/bc_%s\n", c)
 				}
+			case "bc_stop":
+				respuesta = fmt.Sprintf("🚴 Parando clases de bestcycling")
+				stopBestCycling()
+			case "bc_random":
+				respuesta = fmt.Sprintf("🚴 Iniciando clase de bestcycling aleatoria")
+				go bestCycling("")
 			case "reboot":
 				rebootPending = true
 				respuesta = "⚠️ ¿Seguro? Escribe /confirm para reiniciar"
@@ -139,10 +138,17 @@ func main() {
 					"/disk\n" +
 					"/ram\n" +
 					"/reboot\n" +
-					"/bestcycling <clase>?\n" +
+					"/bestcycling\n" +
 					"/help"
+			
 			default:
-				respuesta = "No conozco ese comando, prueba con /help"
+				clase := strings.TrimPrefix(update.Message.Command(), "bc_")
+				if contains(classes, clase) {
+					respuesta = fmt.Sprintf("🚴 Iniciando clase de bestcycling %s", clase)
+					go bestCycling(clase)
+				}else {
+					respuesta = "No conozco ese comando, prueba con /help"
+				}
 			}
 		} else {
 			respuesta = "Muy interesante... pero no soy de muchas palabras prueba con /help "
@@ -161,6 +167,16 @@ func bestCycling(clase string) {
 		fmt.Println("Script error:", err)
 	}
 	fmt.Printf("Salida %s\n", out)
+}
+
+func stopBestCycling() {
+	cmd := exec.Command("pkill", "-f", "node")
+	out, err := cmd.CombinedOutput()
+
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	fmt.Printf("%s\n", out)
 }
 
 func uptime() (string, error) {

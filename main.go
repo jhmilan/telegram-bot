@@ -10,11 +10,22 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/joho/godotenv"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/joho/godotenv"
 )
 
 var rebootPending = false
+var classes = []string{}
+var bcExec = ""
+
+func contains(slice []string, str string) bool {
+	for _, v := range slice {
+		if v == str {
+			return true
+		}
+	}
+	return false
+}
 
 func main() {
 	err := godotenv.Load()
@@ -25,7 +36,18 @@ func main() {
 	token := os.Getenv("TELEGRAM_BOT_TOKEN")
 	if token == "" {
 		log.Fatal("Falta la variable TELEGRAM_BOT_TOKEN")
+
 	}
+
+	bcExec = os.Getenv("BESTCYCLING_SCRIPT")
+	if bcExec == "" {
+		log.Fatal("Falta la variable BESTCYCLING_SCRIPT")
+	}
+	bcClasses := os.Getenv("BESTCYCLING_CLASSES")
+	if bcClasses == "" {
+		log.Fatal("Falta la variable bcClasses")
+	}
+	classes = strings.Split(bcClasses, ",")
 
 	allowedUserID, err := strconv.Atoi(os.Getenv("TELEGRAM_USER_ID"))
 	if err != nil {
@@ -86,6 +108,18 @@ func main() {
 				if err != nil {
 					respuesta = "❌ No se pudo obtener el uso de RAM"
 				}
+			case "bestcycling":
+				clase := update.Message.CommandArguments()
+				if clase == "" || contains(classes, clase) {
+					respuesta = fmt.Sprintf("🚴 Iniciando clase de bestcycling %s", clase)
+					go bestCycling(clase)
+				} else {
+					respuesta = "❌ Clase no conocida. Puedo elegir una al azar si pones nada. Elige\n"
+					respuesta += fmt.Sprint("/bestcycling\n")
+					for _, c := range classes {
+						respuesta += fmt.Sprintf("/bestcycling %s\n", c)
+					}
+				}
 			case "reboot":
 				rebootPending = true
 				respuesta = "⚠️ ¿Seguro? Escribe /confirm para reiniciar"
@@ -105,6 +139,7 @@ func main() {
 					"/disk\n" +
 					"/ram\n" +
 					"/reboot\n" +
+					"/bestcycling <clase>?\n" +
 					"/help"
 			default:
 				respuesta = "No conozco ese comando, prueba con /help"
@@ -116,6 +151,16 @@ func main() {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, respuesta)
 		bot.Send(msg)
 	}
+}
+
+func bestCycling(clase string) {
+	cmd := exec.Command(bcExec, clase)
+	out, err := cmd.CombinedOutput()
+
+	if err != nil {
+		fmt.Println("Script error:", err)
+	}
+	fmt.Printf("Salida %s\n", out)
 }
 
 func uptime() (string, error) {
